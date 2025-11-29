@@ -1,0 +1,23 @@
+{
+  "runtime": "Net90",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "openapi.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToCSharpClient": {
+      "className": "GreenStoreApiClient",
+      "namespace": "GreenStore.Clients",
+      "generateClientInterfaces": true,
+      "output": "Clients/GreenStoreClient.cs",
+      "generateOptionalParameters": true,
+      "useBaseUrl": true,
+      "parameterNamingStrategy": "CamelCase",
+      "propertyNamingStrategy": "CamelCase",
+      "generateNullableReferenceTypes": true,
+      "generateDefaultValues": true,
+      "exceptionClass": "ApiException"
+    }
+  }
+}

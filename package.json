@@ -9,7 +9,8 @@
     "watch:css": "npx @tailwindcss/cli -i ./wwwroot/css/styles.css -o ./wwwroot/css/site.css --watch",
     "sass": "sass",
     "start": "npm run build:css dotnet run",
-    "dev": "concurrently \"dotnet watch run\" \"npm run watch:css\""
+    "dev": "concurrently \"dotnet watch run\" \"npm run watch:css\"",
+    "gen:api": "dotnet tool run nswag run nswag.json"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
