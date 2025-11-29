@@ -1,5 +1,5 @@
 ﻿@using GreenStore.Configure
-@using GreenStore.Shared
+@using GreenStore.Shared.Sidebar
 @inherits LayoutComponentBase
 
 <MudThemeProvider Theme="@_theme" />
@@ -9,7 +9,7 @@
 
 <MudLayout>
     <Sidebar></Sidebar>
-    <MudMainContent>
+    <MudMainContent Class="h-full">
         @Body
     </MudMainContent>
 </MudLayout>

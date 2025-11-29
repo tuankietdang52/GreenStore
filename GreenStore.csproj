@@ -3,6 +3,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultScopedCss>true</EnableDefaultScopedCss>
+    <IncludeLayoutScopedCss>true</IncludeLayoutScopedCss>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,9 +24,8 @@
     <Watch Include="**/*.scss" Exclude="node_modules/**" />
   </ItemGroup>
 
-  <Target Name="CompileSass" BeforeTargets="Build">
+  <Target Name="CompileSass" BeforeTargets="Build" Inputs="" Outputs="">
     <Exec Command="echo Compiling SASS..." />
-    <Exec Command="npm run sass --style=compressed wwwroot/scss:wwwroot/css" />
     <Exec
       Command="npm run sass %(ComponentScssFiles.Identity) %(ComponentScssFiles.RelativeDir)%(ComponentScssFiles.Filename).css"
       Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(ComponentScssFiles.Identity)', '.*[/\\]_.*'))"

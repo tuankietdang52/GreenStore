@@ -1,0 +1,68 @@
+@using GreenStore.Configure
+
+<div class="sidebar">
+    <MudDrawer @onmouseleave="() => _isOpenSideBar = false" OpenMiniOnHover="true" Variant="@DrawerVariant.Mini"
+        @bind-Open="@_isOpenSideBar" Anchor="@Anchor.Left" Class="!overflow-hidden">
+        <div Class="h-25 flex items-center text-white">
+            <MudNavLink Href="/" Match="NavLinkMatch.Prefix" Ripple="false" Icon="fa-solid fa-leaf"
+                IconColor="Color.Primary" Class="no-effect">
+                <MudText Color="@Color.Primary" Typo="Typo.h6" class=" whitespace-nowrap ml-2">Green Store</MudText>
+            </MudNavLink>
+        </div>
+        <MudNavMenu Rounded="true" Color="@Color.Primary" Bordered="true" Class="flex flex-col gap-2">
+            @foreach (var item in _sideBarItems)
+            {
+                <MudNavLink Href=@item.Href Match="NavLinkMatch.Prefix" Ripple="false" Icon=@(item.IconClass + " text-sm")
+                    IconColor="Color.Inherit" Class="h-9">
+                    <MudText class=" whitespace-nowrap ml-2">@item.Name</MudText>
+                </MudNavLink>
+            }
+        </MudNavMenu>
+    </MudDrawer>
+</div>
+
+@code {
+    bool _isOpenSideBar = false;
+    SidebarItem[] _sideBarItems = [
+    new() {
+Name = "Thống kê",
+Href = "/dashboard",
+IconClass = "fa fa-magnifying-glass-chart"
+},
+new() {
+Name = "Loại sản phẩm",
+Href = "/categories",
+IconClass = "fa fa-layer-group"
+},
+new() {
+Name = "Kho",
+Href = "/inventories",
+IconClass = "fa fa-box-open"
+},
+new() {
+Name = "Đơn hàng",
+Href = "/orders",
+IconClass = "fa fa-receipt"
+},
+new() {
+Name = "Thanh toán",
+Href = "/payments",
+IconClass = "fa fa-money-bill"
+},
+new() {
+Name = "Sản phẩm",
+Href = "/products",
+IconClass = "fa fa-utensils"
+},
+new() {
+Name = "Nhà cung cấp",
+Href = "/suppliers",
+IconClass = "fa fa-truck-field"
+},
+new() {
+Name = "Nhân viên",
+Href = "/staff",
+IconClass = "fa fa-users"
+}
+    ];
+}
