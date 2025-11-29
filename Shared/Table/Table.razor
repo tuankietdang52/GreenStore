@@ -1,0 +1,44 @@
+@typeparam TModel
+
+<MudTable Loading=@Props.IsLoading Items=@Props.Items Bordered=true Class="!border-black" Height="500px" Striped="true"
+    MultiSelection=@Props.IsSelectable HorizontalScrollbar=true FixedHeader=true>
+    <ColGroup>
+        @if (Props.IsSelectable)
+        {
+            // for select column
+            <col style="width: 40px;" />
+        }
+        @foreach (var column in @Props.Columns)
+        {
+            <col />
+        }
+    </ColGroup>
+    <HeaderContent>
+        @foreach (var column in @Props.Columns)
+        {
+            <MudTh>
+                @if (column.SortSelector is not null)
+                {
+                    <MudTableSortLabel SortBy=@column.SortSelector>
+                        @column.Header
+                    </MudTableSortLabel>
+                }
+                else
+                {
+                    @column.Header
+                }
+            </MudTh>
+        }
+    </HeaderContent>
+    <RowTemplate>
+        @foreach (var column in @Props.Columns)
+        {
+            <MudTd DataLabel=@column.Header>@column.ValueSelector(context)</MudTd>
+        }
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Parameter]
+    public required TableProps<TModel> Props { get; set; }
+}

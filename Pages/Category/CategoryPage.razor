@@ -1,9 +1,91 @@
 @page "/categories"
+@using GreenStore.Clients
+@using GreenStore.Shared.Pagination
+@using GreenStore.Shared.Table
+@inject IGreenStoreApiClient Api
+@inject ISnackbar Toast
 
 <PageTitle>Categories</PageTitle>
 
-<div class="w-full h-full px-4 flex flex-col">
+<div class="w-full h-full px-4 flex flex-col gap-4">
     <MudText Typo="@Typo.h4">
         Categories
     </MudText>
+
+    <MudPaper Class="w-full !flex !flex-col gap-4">
+        <Table Props=@tableProps></Table>
+        <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
+        </Pagination>
+    </MudPaper>
 </div>
+
+@code {
+    #region props and variables
+
+    Response_PagedResponse_CategoryResponse? data;
+    TableProps<CategoryResponse> tableProps = new TableProps<CategoryResponse>
+    {
+        Columns = [
+            new TableColumn<CategoryResponse> {
+                Header = "Id",
+                ValueSelector = c => c.CategoryId
+            },
+            new TableColumn<CategoryResponse> {
+                Header = "Name",
+                SortSelector = c => c.CategoryName,
+                ValueSelector = c => c.CategoryName
+            }
+        ],
+        IsLoading = true,
+        IsSelectable = true
+    };
+
+    PaginationProps paginationProps = new PaginationProps() {
+        CurrentPage = 1,
+        PageSize = 10,
+        TotalPages = 0,
+        Placement = Shared.Pagination.Placement.End
+    };
+
+    #endregion
+
+    private async Task Fetch()
+    {
+        tableProps.IsLoading = true;
+
+        try
+        {
+            int curPage = paginationProps.CurrentPage;
+            int pageSize = paginationProps.PageSize;
+
+            data = await Api.FilterCategoriesAsync(pageNumber: curPage, pageSize: pageSize);
+            tableProps.Items = data?.Data?.Items ?? [];
+            paginationProps.TotalPages = data?.Data?.TotalPages ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Can't load categories", Severity.Error);
+        }
+
+        tableProps.IsLoading = false;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Fetch();
+    }
+
+    private async void OnPageChanged(int page)
+    {
+        paginationProps.CurrentPage = page;
+        await Fetch();
+    }
+
+    private async void OnPageSizeChanged(int pageSize)
+    {
+        paginationProps.PageSize = pageSize;
+        await Fetch();
+    }
+}

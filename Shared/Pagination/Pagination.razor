@@ -1,0 +1,44 @@
+<div class=@(_placement + " w-full flex items-center p-4 mb-4 gap-3")>
+    <p>Rows per page: </p>
+    <MudSelect FitContent=true Value="@Props.PageSize" ValueChanged="OnPageSizeChanged" Variant="Variant.Text">
+        <MudSelectItem Value=5>5</MudSelectItem>
+        <MudSelectItem Value=10>10</MudSelectItem>
+        <MudSelectItem Value=20>20</MudSelectItem>
+        <MudSelectItem Value=50>50</MudSelectItem>
+        <MudSelectItem Value=100>100</MudSelectItem>
+    </MudSelect>
+    <MudPagination Size="Size.Medium" ShowFirstButton="true" ShowLastButton="true" Count="Props.TotalPages"
+        Selected="Props.CurrentPage" SelectedChanged="@OnPageChanged">
+    </MudPagination>
+</div>
+
+@code {
+    [Parameter]
+    public required PaginationProps Props { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageSizeChanged { get; set; }
+
+    string _placement = "justify-start";
+
+    protected override void OnInitialized()
+    {
+        switch (Props.Placement)
+        {
+            case Placement.Center:
+                _placement = "justify-center";
+                break;
+
+            case Placement.End:
+                _placement = "justify-end";
+                break;
+
+            default:
+                _placement = "justify-start";
+                break;
+        }
+    }
+}
