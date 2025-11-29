@@ -34,6 +34,16 @@ wwwroot/css/site.css
 wwwroot/dist/
 wwwroot/lib/
 
+# Ignore generated Razor component CSS
+*.razor.css
+
+# Ignore source map files
+*.css.map
+
+# Ignore site.css in wwwroot
+wwwroot/site.css
+
+
 # Environment variables
 .env
 .env.*

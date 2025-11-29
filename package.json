@@ -5,19 +5,18 @@
   "main": "index.js",
   "packageManager": "npm@10.9.4",
   "scripts": {
-    "start": "dotnet run",
-    "dev": "dotnet watch run",
-    "build:css": "npx @tailwindcss/cli -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css",
-    "watch:css": "npx @tailwindcss/cli -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --watch"
-  },
-  "dependencies": {
-    "sonner": "^2.0.7",
-    "zod": "^4.1.12"
+    "build:css": "npx @tailwindcss/cli -i ./wwwroot/css/styles.css -o ./wwwroot/css/site.css",
+    "watch:css": "npx @tailwindcss/cli -i ./wwwroot/css/styles.css -o ./wwwroot/css/site.css --watch",
+    "sass": "sass",
+    "start": "npm run build:css dotnet run",
+    "dev": "concurrently \"dotnet watch run\" \"npm run watch:css\""
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
     "postcss": "^8.5.6",
+    "sass": "^1.94.2",
     "tailwindcss": "^4.1.17"
   },
   "keywords": [],

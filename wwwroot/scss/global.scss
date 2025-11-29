@@ -1,0 +1,54 @@
+// import other scss here
+
+$sidebar-bg: #005E42FF;
+$nav-item-active: rgb(43, 173, 3);
+$nav-item-hover: rgba(54, 229, 1, 0.554);
+$nav-item-text-color: rgb(150, 255, 171);
+
+.mud-drawer {
+    background-color: $sidebar-bg !important;
+}
+
+.mud-icon-root {
+    display: flex !important;
+    justify-content: center !important;
+}
+
+.mud-icon-root::before {
+    align-self: center !important;
+}
+
+.mud-nav-item:not(.no-effect) {
+    .mud-nav-link {
+        color: $nav-item-text-color !important;
+        align-items: center;
+    }
+
+    .mud-nav-link.active {
+        color: white !important;
+        background-color: $nav-item-active !important;
+
+        .mud-icon-root {
+            color: white !important;
+        }
+    }
+
+    .mud-nav-link:hover {
+        color: white !important;
+        background-color: $nav-item-hover !important;
+    }
+}
+
+.mud-nav-item.no-effect {
+    .mud-nav-link {
+        align-items: center;
+    }
+
+    .mud-nav-link.active {
+        background-color: unset !important;
+    }
+
+    .mud-nav-link:hover {
+        background-color: unset !important;
+    }
+}
