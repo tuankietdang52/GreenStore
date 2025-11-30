@@ -1,27 +1,52 @@
-@page "/employees"
+﻿@page "/employees"
 @using GreenStore.Clients
 @using GreenStore.Shared.Pagination
 @using GreenStore.Shared.Table
 @inject IGreenStoreApiClient Api
 @inject ISnackbar Toast
+@inject NavigationManager NavManager
 
 
 <PageTitle>Employees</PageTitle>
 
 <div class="w-full h-full px-4 flex flex-col gap-4">
-    <MudText Typo="@Typo.h4">
-        Employees
-    </MudText>
+    <div class="w-full !flex gap-2 items-center">
+        <MudText Typo="@Typo.h4">
+            Employees
+        </MudText>
+
+        <div class="flex gap-2">
+            @*add button *@
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="NavigateToAdd">
+                <MudIcon Icon="@Icons.Material.Filled.Add" /> Thêm Mới
+            </MudButton>
+
+            @*edit button *@
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Secondary"
+                       OnClick="NavigateToEdit"
+                       Disabled="@(selectedItems.Count != 1)">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" /> Sửa
+            </MudButton>
+        </div>
+    </div>
+
     <MudPaper Class="w-full !flex !flex-col gap-4">
-        <Table Props=@tableProps></Table>
+        <Table Props=@tableProps ></Table>
         <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
         </Pagination>
     </MudPaper>
 </div>
 
 
+
+
 @code {
     Response_PagedResponse_UserResponse? data;
+    private HashSet<UserResponse> selectedItems = new HashSet<UserResponse>();
+
     TableProps<UserResponse> tableProps = new TableProps<UserResponse>
     {
         Columns = [
@@ -56,6 +81,28 @@
         TotalPages = 0,
         Placement = Shared.Pagination.Placement.End
     };
+
+    private void NavigateToAdd()
+    {
+        NavManager.NavigateTo("/employees/add");
+    }
+
+    private void NavigateToEdit()
+    {
+        if (selectedItems.Count == 1)
+        {
+            var selectedEmployee = selectedItems.First();
+            NavManager.NavigateTo($"/employees/edit/{selectedEmployee.UserId}");
+        }
+        else if (selectedItems.Count == 0)
+        {
+            Toast.Add("Vui lòng chọn một nhân viên để sửa", Severity.Warning);
+        }
+        else
+        {
+            Toast.Add("Chỉ được chọn một nhân viên để sửa", Severity.Warning);
+        }
+    }
 
     private async Task Fetch()
     {

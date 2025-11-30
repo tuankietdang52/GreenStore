@@ -1,0 +1,101 @@
+﻿@page "/employees/add"
+@using GreenStore.Clients
+@inject IGreenStoreApiClient Api
+@inject NavigationManager NavManager
+@inject ISnackbar Toast
+
+<PageTitle>Add Employee</PageTitle>
+
+<div class="w-full h-full px-4 flex flex-col gap-4">
+    <div class="flex items-center gap-2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="GoBack" 
+                       Color="Color.Primary" />
+        <MudText Typo="@Typo.h4">Add New Employee</MudText>
+    </div>
+
+    <MudPaper Class="pa-4">
+        <EmployeeForm @ref="employeeForm" IsEditMode="false" />
+
+        <div class="mt-4 flex gap-2 justify-end">
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Default" 
+                       OnClick="GoBack">
+                Cancel
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="HandleSubmit"
+                       Disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <span class="ml-2">Saving...</span>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Save" />
+                    <span class="ml-2">Save</span>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+</div>
+
+@code {
+    private EmployeeForm? employeeForm;
+    private bool isSubmitting = false;
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/employees");
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (employeeForm == null) return;
+
+        var isValid = await employeeForm.ValidateAsync();
+        if (!isValid)
+        {
+            Toast.Add("Please fill in all required fields correctly", Severity.Error);
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var model = employeeForm.GetModel();
+            
+            if (model is UserCreateRequest createRequest)
+            {
+                var response = await Api.CreateUserAsync(createRequest);
+
+                if (response?.Data != null)
+                {
+                    Toast.Add("Employee created successfully!", Severity.Success);
+                    NavManager.NavigateTo("/employees");
+                }
+                else
+                {
+                    Toast.Add("Failed to create employee", Severity.Error);
+                }
+            }
+            else
+            {
+                Toast.Add("Invalid form data", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

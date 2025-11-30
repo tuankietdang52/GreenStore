@@ -1,0 +1,87 @@
+﻿@using GreenStore.Clients
+@using System.ComponentModel.DataAnnotations
+
+<MudPaper Class="pa-4">
+    <MudForm @ref="form" Model="@model">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="model.Username" 
+                              Label="Username" 
+                              Required="true"
+                              RequiredError="Username is required"
+                              Counter="50"
+                              MaxLength="50"
+                              Disabled="@IsEditMode"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="model.FullName" 
+                              Label="Full Name" 
+                              Counter="100"
+                              MaxLength="100"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+
+            @if (!IsEditMode)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="model.Password" 
+                                  Label="Password" 
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  RequiredError="Password is required"
+                                  Counter="255"
+                                  MaxLength="255"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            }
+
+            <MudItem xs="12" md="6">
+                <MudSelect @bind-Value="model.Role" 
+                           Label="Role" 
+                           Required="true"
+                           RequiredError="Role is required"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
+                    <MudSelectItem Value="@("manager")">Manager</MudSelectItem>
+                    <MudSelectItem Value="@("employee")">Employee</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudForm>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public UserCreateRequest Model { get; set; } = new UserCreateRequest();
+
+    [Parameter]
+    public EventCallback<UserCreateRequest> OnSubmit { get; set; }
+
+    private MudForm? form;
+    private UserCreateRequest model = new UserCreateRequest();
+
+    protected override void OnParametersSet()
+    {
+        if (Model != null)
+        {
+            model = Model;
+        }
+    }
+
+    public async Task<bool> ValidateAsync()
+    {
+        if (form != null)
+        {
+            await form.Validate();
+            return form.IsValid;
+        }
+        return false;
+    }
+
+    public UserCreateRequest GetModel() => model;
+}
