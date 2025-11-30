@@ -1,0 +1,100 @@
+@page "/employees"
+@using GreenStore.Clients
+@using GreenStore.Shared.Pagination
+@using GreenStore.Shared.Table
+@inject IGreenStoreApiClient Api
+@inject ISnackbar Toast
+
+
+<PageTitle>Employees</PageTitle>
+
+<div class="w-full h-full px-4 flex flex-col gap-4">
+    <MudText Typo="@Typo.h4">
+        Employees
+    </MudText>
+    <MudPaper Class="w-full !flex !flex-col gap-4">
+        <Table Props=@tableProps></Table>
+        <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
+        </Pagination>
+    </MudPaper>
+</div>
+
+
+@code {
+    Response_PagedResponse_UserResponse? data;
+    TableProps<UserResponse> tableProps = new TableProps<UserResponse>
+    {
+        Columns = [
+            new TableColumn<UserResponse> {
+                Header = "Id",
+                ValueSelector = e => e.UserId
+            },
+            new TableColumn<UserResponse> {
+                Header = "Name",
+                SortSelector = e => e.FullName,
+                ValueSelector = e => e.FullName
+            },
+            new TableColumn<UserResponse> {
+                Header = "Username",
+                SortSelector = e => e.Username,
+                ValueSelector = e => e.Username
+            },
+            new TableColumn<UserResponse> {
+                Header = "Role",
+                SortSelector = e => e.Role,
+                ValueSelector = e => e.Role
+            }
+        ],
+        IsLoading = true,
+        IsSelectable = true
+    };
+
+    PaginationProps paginationProps = new PaginationProps()
+    {
+        CurrentPage = 1,
+        PageSize = 10,
+        TotalPages = 0,
+        Placement = Shared.Pagination.Placement.End
+    };
+
+    private async Task Fetch()
+    {
+        tableProps.IsLoading = true;
+        try
+        {
+            int curPage = paginationProps.CurrentPage;
+            int pageSize = paginationProps.PageSize;
+            data = await Api.GetAllUsersAsync(curPage, pageSize);
+            if (data != null && data.Data != null)
+            {
+                tableProps.Items = data?.Data?.Items ?? [];
+                paginationProps.TotalPages = data?.Data?.TotalPages ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Error fetching employees: {ex.Message}", Severity.Error);
+        }
+        
+            tableProps.IsLoading = false;
+            StateHasChanged();
+        
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Fetch();
+    }
+
+    private async void OnPageChanged(int page)
+    {
+        paginationProps.CurrentPage = page;
+        await Fetch();
+    }
+
+    private async void OnPageSizeChanged(int pageSize)
+    {
+        paginationProps.PageSize = pageSize;
+        await Fetch();
+    }
+}

@@ -9,6 +9,7 @@ obj/
 *.sln.docstates
 
 # IDE settings
+.vs/
 .vscode/
 .idea/
 *.swp
