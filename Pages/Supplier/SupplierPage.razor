@@ -1,0 +1,348 @@
+@page "/suppliers"
+@using GreenStore.Clients
+@using GreenStore.Shared.Pagination
+@using GreenStore.Shared.Table
+@using GreenStore.Pages.Supplier.Shared
+@inject IGreenStoreApiClient Api
+@inject ISnackbar Toast
+@inject IDialogService DialogService
+
+<PageTitle>Suppliers</PageTitle>
+
+<div class="w-full h-full px-4 flex flex-col gap-4">
+    <MudText Typo="@Typo.h4">
+        Nhà cung cấp
+    </MudText>
+
+    <MudPaper Class="w-full flex! flex-col! gap-4">
+        <div class="p-4! flex flex-wrap gap-4 items-center">
+            <MudTextField T="string" Value="searchName" ValueChanged="OnSearchNameChanged" 
+                Label="Tìm theo tên" Placeholder="Nhập tên..." Variant="Variant.Outlined" 
+                Margin="Margin.Dense" Style="flex: 1; min-width: 200px;" Clearable="true" Adornment="Adornment.Start" 
+                AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" 
+                DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebounced" />
+            <MudTextField T="string" Value="searchPhone" ValueChanged="OnSearchPhoneChanged" 
+                Label="Tìm theo SĐT" Placeholder="Nhập số điện thoại..." Variant="Variant.Outlined" 
+                Margin="Margin.Dense" Style="flex: 1; min-width: 200px;" Clearable="true" Adornment="Adornment.Start" 
+                AdornmentIcon="@Icons.Material.Filled.Phone" Immediate="true" 
+                DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchPhoneDebounced" />
+            <MudButton Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" 
+                OnClick="OnResetSearch" Style="height: 40px;">Đặt lại</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" 
+                OnClick="OpenCreateDialog" Style="height: 40px;">Thêm</MudButton>
+        </div>
+        @if (selectedItems.Any())
+        {
+            <div class="p-2 flex items-center gap-2">
+                <MudText>Đã chọn @selectedItems.Count mục</MudText>
+                <MudButton Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" 
+                    StartIcon="@Icons.Material.Filled.Delete" OnClick="OpenDeleteMultipleDialog">
+                    Xóa đã chọn
+                </MudButton>
+            </div>
+        }
+        <MudTable Loading=@isLoading Items=@items Bordered=true Class="!border-black" Height="500px" Striped="true"
+            HorizontalScrollbar=true FixedHeader=true MultiSelection=true @bind-SelectedItems="selectedItems">
+            <HeaderContent>
+                <MudTh>Tên</MudTh>
+                <MudTh>SĐT</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Địa chỉ</MudTh>
+                <MudTh Style="width: 150px;">Hành động</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Tên">@context.Name</MudTd>
+                <MudTd DataLabel="SĐT">@context.Phone</MudTd>
+                <MudTd DataLabel="Email">@context.Email</MudTd>
+                <MudTd DataLabel="Địa chỉ">@context.Address</MudTd>
+                <MudTd DataLabel="Hành động">
+                    <div class="flex gap-2">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                            OnClick="@(() => OpenEditDialog(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                            OnClick="@(() => OpenDeleteDialog(context))" />
+                    </div>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+        <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
+        </Pagination>
+    </MudPaper>
+</div>
+
+@* Edit Dialog *@
+<UpdateSupplierDialog @bind-IsVisible="isEditDialogVisible" Model="editModel" OnSubmit="SaveEdit" />
+
+@* Create Dialog *@
+<CreateSupplierDialog @bind-IsVisible="isCreateDialogVisible" Model="createModel" OnSubmit="SaveCreate" />
+
+@* Delete Confirmation Dialog *@
+<MudDialog @bind-Visible="isDeleteDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Xác nhận xóa</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Bạn có chắc chắn muốn xóa nhà cung cấp <strong>@selectedSupplier?.Name</strong>?</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteDialog">Hủy</MudButton>
+        <MudButton Color="Color.Error" OnClick="ConfirmDelete">Xóa</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Delete Multiple Confirmation Dialog *@
+<MudDialog @bind-Visible="isDeleteMultipleDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Xác nhận xóa nhiều</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Bạn có chắc chắn muốn xóa <strong>@selectedItems.Count</strong> nhà cung cấp đã chọn?</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDeleteMultipleDialog">Hủy</MudButton>
+        <MudButton Color="Color.Error" OnClick="ConfirmDeleteMultiple">Xóa</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    #region props and variables
+
+    Response_PagedResponse_SupplierResponse? data;
+    IEnumerable<SupplierResponse> items = [];
+    bool isLoading = true;
+
+    // Search
+    string? searchName;
+    string? searchPhone;
+
+    PaginationProps paginationProps = new PaginationProps()
+    {
+        CurrentPage = 1,
+        PageSize = 10,
+        TotalPages = 0,
+        Placement = GreenStore.Shared.Pagination.Placement.End
+    };
+
+    // Edit dialog
+    bool isEditDialogVisible = false;
+    SupplierDto editModel = new SupplierDto();
+
+    // Create dialog
+    bool isCreateDialogVisible = false;
+    SupplierDto createModel = new SupplierDto();
+
+    // Delete dialog
+    bool isDeleteDialogVisible = false;
+    SupplierResponse? selectedSupplier;
+
+    // Multi-select
+    HashSet<SupplierResponse> selectedItems = new HashSet<SupplierResponse>();
+    bool isDeleteMultipleDialogVisible = false;
+
+    #endregion
+
+    private async Task Fetch()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            int curPage = paginationProps.CurrentPage;
+            int pageSize = paginationProps.PageSize;
+
+            data = await Api.FilterSuppliersAsync(
+                name: string.IsNullOrWhiteSpace(searchName) ? null : searchName,
+                phone: string.IsNullOrWhiteSpace(searchPhone) ? null : searchPhone,
+                pageNumber: curPage, 
+                pageSize: pageSize);
+            items = data?.Data?.Items ?? [];
+            paginationProps.TotalPages = data?.Data?.TotalPages ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Không thể tải danh sách nhà cung cấp", Severity.Error);
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Fetch();
+    }
+
+    private async void OnPageChanged(int page)
+    {
+        paginationProps.CurrentPage = page;
+        await Fetch();
+    }
+
+    private async void OnPageSizeChanged(int pageSize)
+    {
+        paginationProps.PageSize = pageSize;
+        await Fetch();
+    }
+
+    private void OnSearchNameChanged(string value)
+    {
+        searchName = value;
+    }
+
+    private void OnSearchPhoneChanged(string value)
+    {
+        searchPhone = value;
+    }
+
+    private async Task OnSearchDebounced(string value)
+    {
+        searchName = value;
+        paginationProps.CurrentPage = 1;
+        selectedItems.Clear();
+        await Fetch();
+    }
+
+    private async Task OnSearchPhoneDebounced(string value)
+    {
+        searchPhone = value;
+        paginationProps.CurrentPage = 1;
+        selectedItems.Clear();
+        await Fetch();
+    }
+
+    private async Task OnResetSearch()
+    {
+        searchName = null;
+        searchPhone = null;
+        paginationProps.CurrentPage = 1;
+        selectedItems.Clear();
+        await Fetch();
+    }
+
+    #region Create
+
+    private void OpenCreateDialog()
+    {
+        createModel = new SupplierDto();
+        isCreateDialogVisible = true;
+    }
+
+    private async Task SaveCreate(SupplierDto model)
+    {
+        try
+        {
+            await Api.CreateSupplierAsync(model);
+            Toast.Add("Thêm nhà cung cấp thành công", Severity.Success);
+            isCreateDialogVisible = false;
+            await Fetch();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Không thể thêm nhà cung cấp", Severity.Error);
+        }
+    }
+
+    #endregion
+
+    #region Edit
+
+    private void OpenEditDialog(SupplierResponse supplier)
+    {
+        editModel = new SupplierDto
+        {
+            SupplierId = supplier.SupplierId,
+            Name = supplier.Name ?? "",
+            Phone = supplier.Phone,
+            Email = supplier.Email,
+            Address = supplier.Address
+        };
+        isEditDialogVisible = true;
+    }
+
+    private async Task SaveEdit(SupplierDto model)
+    {
+        try
+        {
+            await Api.UpdateSupplierAsync(model.SupplierId, model);
+            Toast.Add("Cập nhật nhà cung cấp thành công", Severity.Success);
+            isEditDialogVisible = false;
+            await Fetch();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Không thể cập nhật nhà cung cấp", Severity.Error);
+        }
+    }
+
+    #endregion
+
+    #region Delete
+
+    private void OpenDeleteDialog(SupplierResponse supplier)
+    {
+        selectedSupplier = supplier;
+        isDeleteDialogVisible = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        isDeleteDialogVisible = false;
+        selectedSupplier = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedSupplier == null) return;
+
+        try
+        {
+            await Api.DeleteSupplierAsync(selectedSupplier.SupplierId);
+            Toast.Add("Xóa nhà cung cấp thành công", Severity.Success);
+            CloseDeleteDialog();
+            await Fetch();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Không thể xóa nhà cung cấp", Severity.Error);
+        }
+    }
+
+    private void OpenDeleteMultipleDialog()
+    {
+        if (!selectedItems.Any()) return;
+        isDeleteMultipleDialogVisible = true;
+    }
+
+    private void CloseDeleteMultipleDialog()
+    {
+        isDeleteMultipleDialogVisible = false;
+    }
+
+    private async Task ConfirmDeleteMultiple()
+    {
+        if (!selectedItems.Any()) return;
+
+        try
+        {
+            var deleteTasks = selectedItems.Select(s => Api.DeleteSupplierAsync(s.SupplierId));
+            await Task.WhenAll(deleteTasks);
+            
+            Toast.Add($"Đã xóa {selectedItems.Count} nhà cung cấp thành công", Severity.Success);
+            selectedItems.Clear();
+            CloseDeleteMultipleDialog();
+            await Fetch();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Toast.Add("Không thể xóa một số nhà cung cấp", Severity.Error);
+        }
+    }
+
+    #endregion
+}
