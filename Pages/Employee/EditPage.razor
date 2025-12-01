@@ -1,4 +1,4 @@
-﻿@page "/employees/edit/{Id:int}"
+﻿@page "/employees/edit"
 @using GreenStore.Clients
 @inject IGreenStoreApiClient Api
 @inject NavigationManager NavManager
@@ -60,9 +60,7 @@
 </div>
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
-
+    private int employeeId;
     private EmployeeForm? employeeForm;
     private UserResponse? employeeData;
     private UserCreateRequest formModel = new UserCreateRequest();
@@ -71,7 +69,32 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadEmployee();
+        // Get ID from query string (encoded)
+        var uri = new Uri(NavManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var empIdEncoded = query["empId"];
+
+        if (!string.IsNullOrEmpty(empIdEncoded))
+        {
+            try
+            {
+                // Decode the base64 encoded ID
+                var decodedBytes = Convert.FromBase64String(empIdEncoded);
+                var decodedId = System.Text.Encoding.UTF8.GetString(decodedBytes);
+                employeeId = int.Parse(decodedId);
+                await LoadEmployee();
+            }
+            catch (Exception ex)
+            {
+                Toast.Add($"Invalid employee reference: {ex.Message}", Severity.Error);
+                isLoading = false;
+            }
+        }
+        else
+        {
+            Toast.Add("No employee specified", Severity.Error);
+            isLoading = false;
+        }
     }
 
     private async Task LoadEmployee()
@@ -79,7 +102,7 @@
         isLoading = true;
         try
         {
-            var response = await Api.GetUserByIdAsync(Id);
+            var response = await Api.GetUserByIdAsync(employeeId);
             if (response?.Data != null)
             {
                 employeeData = response.Data;
@@ -140,7 +163,7 @@
                 Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password
             };
 
-            var response = await Api.UpdateUserAsync(Id, updateRequest);
+            var response = await Api.UpdateUserAsync(employeeId, updateRequest);
 
             if (response?.Data != null)
             {

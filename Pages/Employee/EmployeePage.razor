@@ -5,36 +5,112 @@
 @inject IGreenStoreApiClient Api
 @inject ISnackbar Toast
 @inject NavigationManager NavManager
+@inject IDialogService DialogService
 
 
 <PageTitle>Employees</PageTitle>
 
 <div class="w-full h-full px-4 flex flex-col gap-4">
-    <div class="w-full !flex gap-2 items-center">
-        <MudText Typo="@Typo.h4">
-            Employees
-        </MudText>
+    <div class="w-full flex flex-col gap-2">
+        <div class="flex gap-2 items-center">
+            <MudText Typo="@Typo.h4">
+                Employees
+            </MudText>
 
-        <div class="flex gap-2">
-            @*add button *@
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       OnClick="NavigateToAdd">
-                <MudIcon Icon="@Icons.Material.Filled.Add" /> Thêm Mới
-            </MudButton>
+            <div class="flex gap-2">
+                @*add button *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="NavigateToAdd">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" /> Thêm Mới
+                </MudButton>
 
-            @*edit button *@
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Secondary"
-                       OnClick="NavigateToEdit"
-                       Disabled="@(selectedItems.Count != 1)">
-                <MudIcon Icon="@Icons.Material.Filled.Edit" /> Sửa
-            </MudButton>
+                @*edit button - enabled only when exactly 1 item selected *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Secondary"
+                           OnClick="NavigateToEdit"
+                           Disabled="@(tableProps.SelectedItems.Count != 1)">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" /> Sửa
+                </MudButton>
+
+                @*delete button - enabled only when exactly 1 item selected *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           OnClick="ShowDeleteDialog"
+                           Disabled="@(tableProps.SelectedItems.Count != 1)">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" /> Xóa
+                </MudButton>
+            </div>
         </div>
+
+        @* Filter Section *@
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="2">
+                    <MudSelect @bind-Value="searchType"
+                               Label="Tìm theo"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="SearchType.Username">Username</MudSelectItem>
+                        <MudSelectItem Value="SearchType.FullName">Full Name</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="searchText"
+                                  Label="Tìm kiếm"
+                                  Placeholder="@GetSearchPlaceholder()"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Clearable="true"
+                                  OnClearButtonClick="ClearSearch"
+                                  Immediate="false" />
+                </MudItem>
+
+                <MudItem xs="12" md="2">
+                    <MudSelect @bind-Value="selectedRole"
+                               Label="Role"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               Placeholder="Tất cả">
+                        <MudSelectItem Value="@((string?)null)">Tất cả</MudSelectItem>
+                        <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
+                        <MudSelectItem Value="@("manager")">Manager</MudSelectItem>
+                        <MudSelectItem Value="@("employee")">Employee</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Search"
+                               OnClick="ApplyFilter">
+                        Tìm kiếm
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearFilter">
+                        Xóa bộ lọc
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @* Selection counter *@
+        @if (tableProps.SelectedItems.Count > 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="py-2">
+                <MudText Typo="Typo.body2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                    Đã chọn: <strong>@tableProps.SelectedItems.Count</strong> nhân viên
+                </MudText>
+            </MudAlert>
+        }
     </div>
 
     <MudPaper Class="w-full !flex !flex-col gap-4">
-        <Table Props=@tableProps ></Table>
+        <Table Props=@tableProps></Table>
         <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
         </Pagination>
     </MudPaper>
@@ -42,18 +118,25 @@
 
 
 
-
 @code {
+    // Enum for search type
+    private enum SearchType
+    {
+        Username,
+        FullName
+    }
+
     Response_PagedResponse_UserResponse? data;
-    private HashSet<UserResponse> selectedItems = new HashSet<UserResponse>();
+    
+    // Filter parameters
+    private string? searchText = null;
+    private string? selectedRole = null;
+    private SearchType searchType = SearchType.Username;
 
     TableProps<UserResponse> tableProps = new TableProps<UserResponse>
     {
         Columns = [
-            new TableColumn<UserResponse> {
-                Header = "Id",
-                ValueSelector = e => e.UserId
-            },
+            // Removed ID column - ID is still in the data but not displayed
             new TableColumn<UserResponse> {
                 Header = "Name",
                 SortSelector = e => e.FullName,
@@ -71,7 +154,8 @@
             }
         ],
         IsLoading = true,
-        IsSelectable = true
+        IsSelectable = true,
+        SelectedItems = new HashSet<UserResponse>()
     };
 
     PaginationProps paginationProps = new PaginationProps()
@@ -82,6 +166,23 @@
         Placement = Shared.Pagination.Placement.End
     };
 
+    protected override void OnInitialized()
+    {
+        tableProps.SelectedItemsChanged = EventCallback.Factory.Create<ISet<UserResponse>>(this, OnSelectionChanged);
+    }
+
+    private string GetSearchPlaceholder()
+    {
+        return searchType == SearchType.Username 
+            ? "Nhập username..." 
+            : "Nhập tên nhân viên...";
+    }
+
+    private void OnSelectionChanged(ISet<UserResponse> selectedItems)
+    {
+        StateHasChanged();
+    }
+
     private void NavigateToAdd()
     {
         NavManager.NavigateTo("/employees/add");
@@ -89,12 +190,13 @@
 
     private void NavigateToEdit()
     {
-        if (selectedItems.Count == 1)
+        if (tableProps.SelectedItems.Count == 1)
         {
-            var selectedEmployee = selectedItems.First();
-            NavManager.NavigateTo($"/employees/edit/{selectedEmployee.UserId}");
+            var selectedEmployee = tableProps.SelectedItems.First();
+            // Store the ID in session storage or pass it via NavigationManager state
+            NavManager.NavigateTo($"/employees/edit?empId={Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(selectedEmployee.UserId.ToString()))}");
         }
-        else if (selectedItems.Count == 0)
+        else if (tableProps.SelectedItems.Count == 0)
         {
             Toast.Add("Vui lòng chọn một nhân viên để sửa", Severity.Warning);
         }
@@ -104,6 +206,74 @@
         }
     }
 
+    private async Task ShowDeleteDialog()
+    {
+        if (tableProps.SelectedItems.Count != 1)
+        {
+            Toast.Add("Vui lòng chọn một nhân viên để xóa", Severity.Warning);
+            return;
+        }
+
+        var selectedEmployee = tableProps.SelectedItems.First();
+        
+        bool? result = await DialogService.ShowMessageBox(
+            "Xác nhận xóa",
+            $"Bạn có chắc chắn muốn xóa nhân viên '{selectedEmployee.FullName ?? selectedEmployee.Username}' không?",
+            yesText: "Xóa", 
+            cancelText: "Hủy");
+
+        if (result == true)
+        {
+            await DeleteEmployee(selectedEmployee.UserId);
+        }
+    }
+
+    private async Task DeleteEmployee(int userId)
+    {
+        try
+        {
+            var response = await Api.DeleteUserAsync(userId);
+            
+            if (response != null)
+            {
+                Toast.Add("Xóa nhân viên thành công!", Severity.Success);
+                
+                // Clear selection and refresh list
+                tableProps.SelectedItems.Clear();
+                await Fetch();
+            }
+            else
+            {
+                Toast.Add("Không thể xóa nhân viên", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Lỗi khi xóa nhân viên: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ApplyFilter()
+    {
+        paginationProps.CurrentPage = 1; // Reset to first page when filtering
+        await Fetch();
+    }
+
+    private async Task ClearFilter()
+    {
+        searchText = null;
+        selectedRole = null;
+        searchType = SearchType.Username;
+        paginationProps.CurrentPage = 1;
+        await Fetch();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchText = null;
+        await Fetch();
+    }
+
     private async Task Fetch()
     {
         tableProps.IsLoading = true;
@@ -111,7 +281,45 @@
         {
             int curPage = paginationProps.CurrentPage;
             int pageSize = paginationProps.PageSize;
-            data = await Api.GetAllUsersAsync(curPage, pageSize);
+
+            // Check if we have any filters
+            bool hasFilters = !string.IsNullOrWhiteSpace(searchText) || !string.IsNullOrWhiteSpace(selectedRole);
+
+            if (hasFilters)
+            {
+                // Determine username and fullName based on searchType
+                string? usernameFilter = null;
+                string? fullNameFilter = null;
+
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    if (searchType == SearchType.Username)
+                    {
+                        usernameFilter = searchText;
+                        fullNameFilter = null; // Empty string for fullName
+                    }
+                    else // SearchType.FullName
+                    {
+                        usernameFilter = null; // Empty string for username
+                        fullNameFilter = searchText;
+                    }
+                }
+
+                // Use FilterUsersAsync with appropriate parameters
+                data = await Api.FilterUsersAsync(
+                    username: usernameFilter,
+                    fullName: fullNameFilter,
+                    role: selectedRole,
+                    pageNumber: curPage,
+                    pageSize: pageSize
+                );
+            }
+            else
+            {
+                // Use GetAllUsersAsync when no filters
+                data = await Api.GetAllUsersAsync(curPage, pageSize);
+            }
+
             if (data != null && data.Data != null)
             {
                 tableProps.Items = data?.Data?.Items ?? [];
@@ -123,9 +331,8 @@
             Toast.Add($"Error fetching employees: {ex.Message}", Severity.Error);
         }
         
-            tableProps.IsLoading = false;
-            StateHasChanged();
-        
+        tableProps.IsLoading = false;
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()

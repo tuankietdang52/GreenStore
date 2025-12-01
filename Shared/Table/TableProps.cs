@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +18,7 @@ namespace GreenStore.Shared.Table
         public IEnumerable<TModel> Items { get; set; } = [];
         public bool IsLoading = false;
         public bool IsSelectable = false;
+        public ISet<TModel> SelectedItems { get; set; } = new HashSet<TModel>();
+        public EventCallback<ISet<TModel>> SelectedItemsChanged { get; set; }
     }
 }
