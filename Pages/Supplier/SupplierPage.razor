@@ -16,55 +16,31 @@
 
     <MudPaper Class="w-full flex! flex-col! gap-4">
         <div class="p-4! flex flex-wrap gap-4 items-center">
-            <MudTextField T="string" Value="searchName" ValueChanged="OnSearchNameChanged" 
-                Label="Tìm theo tên" Placeholder="Nhập tên..." Variant="Variant.Outlined" 
+            <MudSelect T="SearchType" Value="searchType" ValueChanged="OnSearchTypeChanged"
+                Label="Tìm theo" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                Style="width: 150px;">
+                <MudSelectItem Value="SearchType.Name">Tên</MudSelectItem>
+                <MudSelectItem Value="SearchType.Phone">Số điện thoại</MudSelectItem>
+            </MudSelect>
+            <MudTextField T="string" Value="searchValue" ValueChanged="OnSearchValueChanged" 
+                Label="@GetSearchLabel()" Placeholder="@GetSearchPlaceholder()" Variant="Variant.Outlined" 
                 Margin="Margin.Dense" Style="flex: 1; min-width: 200px;" Clearable="true" Adornment="Adornment.Start" 
-                AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" 
+                AdornmentIcon="@GetSearchIcon()" Immediate="true" 
                 DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchDebounced" />
-            <MudTextField T="string" Value="searchPhone" ValueChanged="OnSearchPhoneChanged" 
-                Label="Tìm theo SĐT" Placeholder="Nhập số điện thoại..." Variant="Variant.Outlined" 
-                Margin="Margin.Dense" Style="flex: 1; min-width: 200px;" Clearable="true" Adornment="Adornment.Start" 
-                AdornmentIcon="@Icons.Material.Filled.Phone" Immediate="true" 
-                DebounceInterval="300" OnDebounceIntervalElapsed="OnSearchPhoneDebounced" />
             <MudButton Color="Color.Default" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" 
                 OnClick="OnResetSearch" Style="height: 40px;">Đặt lại</MudButton>
             <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" 
                 OnClick="OpenCreateDialog" Style="height: 40px;">Thêm</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" 
+                OnClick="OpenDeleteMultipleDialog" Style="height: 40px;" Disabled="@(!selectedItems.Any())">Xóa</MudButton>
         </div>
         @if (selectedItems.Any())
         {
             <div class="p-2 flex items-center gap-2">
                 <MudText>Đã chọn @selectedItems.Count mục</MudText>
-                <MudButton Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" 
-                    StartIcon="@Icons.Material.Filled.Delete" OnClick="OpenDeleteMultipleDialog">
-                    Xóa đã chọn
-                </MudButton>
             </div>
         }
-        <MudTable Loading=@isLoading Items=@items Bordered=true Class="!border-black" Height="500px" Striped="true"
-            HorizontalScrollbar=true FixedHeader=true MultiSelection=true @bind-SelectedItems="selectedItems">
-            <HeaderContent>
-                <MudTh>Tên</MudTh>
-                <MudTh>SĐT</MudTh>
-                <MudTh>Email</MudTh>
-                <MudTh>Địa chỉ</MudTh>
-                <MudTh Style="width: 150px;">Hành động</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Tên">@context.Name</MudTd>
-                <MudTd DataLabel="SĐT">@context.Phone</MudTd>
-                <MudTd DataLabel="Email">@context.Email</MudTd>
-                <MudTd DataLabel="Địa chỉ">@context.Address</MudTd>
-                <MudTd DataLabel="Hành động">
-                    <div class="flex gap-2">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                            OnClick="@(() => OpenEditDialog(context))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                            OnClick="@(() => OpenDeleteDialog(context))" />
-                    </div>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        <Table TModel="SupplierResponse" Props="tableProps" />
         <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
         </Pagination>
     </MudPaper>
@@ -112,8 +88,12 @@
     bool isLoading = true;
 
     // Search
-    string? searchName;
-    string? searchPhone;
+    enum SearchType { Name, Phone }
+    SearchType searchType = SearchType.Name;
+    string? searchValue;
+
+    // Table props
+    TableProps<SupplierResponse> tableProps = null!;
 
     PaginationProps paginationProps = new PaginationProps()
     {
@@ -141,15 +121,87 @@
 
     #endregion
 
+    protected override void OnInitialized()
+    {
+        InitializeTableProps();
+    }
+
+    private void InitializeTableProps()
+    {
+        tableProps = new TableProps<SupplierResponse>
+        {
+            Columns = new List<TableColumn<SupplierResponse>>
+            {
+                new TableColumn<SupplierResponse> { Header = "TÊN", ValueSelector = x => x.Name ?? "", SortSelector = x => x.Name ?? "" },
+                new TableColumn<SupplierResponse> { Header = "SĐT", ValueSelector = x => x.Phone ?? "" },
+                new TableColumn<SupplierResponse> { Header = "EMAIL", ValueSelector = x => x.Email ?? "" },
+                new TableColumn<SupplierResponse> { Header = "ĐỊA CHỈ", ValueSelector = x => x.Address ?? "" }
+            },
+            Items = items,
+            IsLoading = isLoading,
+            IsSelectable = true,
+            SelectedItems = selectedItems,
+            SelectedItemsChanged = EventCallback.Factory.Create<ISet<SupplierResponse>>(this, OnSelectedItemsChanged),
+            Actions = new List<TableAction<SupplierResponse>>
+            {
+                new TableAction<SupplierResponse>
+                {
+                    Icon = Icons.Material.Filled.Edit,
+                    Text = "Chỉnh sửa",
+                    Color = Color.Primary,
+                    OnClick = OpenEditDialog
+                }
+            }
+        };
+    }
+
+    private void UpdateTableProps()
+    {
+        tableProps.Items = items;
+        tableProps.IsLoading = isLoading;
+        tableProps.SelectedItems = selectedItems;
+    }
+
+    private void OnSelectedItemsChanged(ISet<SupplierResponse> items)
+    {
+        selectedItems = items as HashSet<SupplierResponse> ?? new HashSet<SupplierResponse>(items);
+        StateHasChanged();
+    }
+
+    private string GetSearchLabel() => searchType switch
+    {
+        SearchType.Name => "Tìm theo tên",
+        SearchType.Phone => "Tìm theo SĐT",
+        _ => "Tìm kiếm"
+    };
+
+    private string GetSearchPlaceholder() => searchType switch
+    {
+        SearchType.Name => "Nhập tên...",
+        SearchType.Phone => "Nhập số điện thoại...",
+        _ => "Nhập từ khóa..."
+    };
+
+    private string GetSearchIcon() => searchType switch
+    {
+        SearchType.Name => Icons.Material.Filled.Search,
+        SearchType.Phone => Icons.Material.Filled.Phone,
+        _ => Icons.Material.Filled.Search
+    };
+
     private async Task Fetch()
     {
         isLoading = true;
+        UpdateTableProps();
         StateHasChanged();
 
         try
         {
             int curPage = paginationProps.CurrentPage;
             int pageSize = paginationProps.PageSize;
+
+            string? searchName = searchType == SearchType.Name ? searchValue : null;
+            string? searchPhone = searchType == SearchType.Phone ? searchValue : null;
 
             data = await Api.FilterSuppliersAsync(
                 name: string.IsNullOrWhiteSpace(searchName) ? null : searchName,
@@ -166,6 +218,7 @@
         }
 
         isLoading = false;
+        UpdateTableProps();
         StateHasChanged();
     }
 
@@ -186,27 +239,21 @@
         await Fetch();
     }
 
-    private void OnSearchNameChanged(string value)
+    private void OnSearchTypeChanged(SearchType value)
     {
-        searchName = value;
+        searchType = value;
+        searchValue = null;
+        StateHasChanged();
     }
 
-    private void OnSearchPhoneChanged(string value)
+    private void OnSearchValueChanged(string value)
     {
-        searchPhone = value;
+        searchValue = value;
     }
 
     private async Task OnSearchDebounced(string value)
     {
-        searchName = value;
-        paginationProps.CurrentPage = 1;
-        selectedItems.Clear();
-        await Fetch();
-    }
-
-    private async Task OnSearchPhoneDebounced(string value)
-    {
-        searchPhone = value;
+        searchValue = value;
         paginationProps.CurrentPage = 1;
         selectedItems.Clear();
         await Fetch();
@@ -214,8 +261,8 @@
 
     private async Task OnResetSearch()
     {
-        searchName = null;
-        searchPhone = null;
+        searchValue = null;
+        searchType = SearchType.Name;
         paginationProps.CurrentPage = 1;
         selectedItems.Clear();
         await Fetch();
@@ -260,6 +307,7 @@
             Address = supplier.Address
         };
         isEditDialogVisible = true;
+        StateHasChanged();
     }
 
     private async Task SaveEdit(SupplierDto model)

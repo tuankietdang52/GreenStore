@@ -1,11 +1,13 @@
-$sidebar-bg: #005E42FF;
+$sidebar-bg: rgb(255, 255, 255);
 $nav-item-active: rgb(43, 173, 3);
 $nav-item-hover: rgba(54, 229, 1, 0.554);
-$nav-item-text-color: rgb(150, 255, 171);
+$nav-item-text-color: #333333;
+$sidebar-font: 'Montserrat', sans-serif;
 
 .sidebar ::deep {
     .mud-drawer {
         background-color: $sidebar-bg !important;
+        font-family: $sidebar-font !important;
     }
 
     .mud-icon-root {
@@ -21,6 +23,7 @@ $nav-item-text-color: rgb(150, 255, 171);
         .mud-nav-link {
             color: $nav-item-text-color !important;
             align-items: center;
+            font-family: $sidebar-font !important;
         }
 
         .mud-nav-link.active {
@@ -41,6 +44,7 @@ $nav-item-text-color: rgb(150, 255, 171);
     .mud-nav-item.no-effect {
         .mud-nav-link {
             align-items: center;
+            font-family: $sidebar-font !important;
         }
 
         .mud-nav-link.active {
