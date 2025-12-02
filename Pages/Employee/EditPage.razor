@@ -1,0 +1,188 @@
+﻿@page "/employees/edit"
+@using GreenStore.Clients
+@inject IGreenStoreApiClient Api
+@inject NavigationManager NavManager
+@inject ISnackbar Toast
+
+<PageTitle>Edit Employee</PageTitle>
+
+<div class="w-full h-full px-4 flex flex-col gap-4">
+    <div class="flex items-center gap-2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="GoBack" 
+                       Color="Color.Primary" />
+        <MudText Typo="@Typo.h4">Edit Employee</MudText>
+    </div>
+
+    @if (isLoading)
+    {
+        <MudPaper Class="pa-4 flex justify-center items-center" Style="min-height: 300px;">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+        </MudPaper>
+    }
+    else if (employeeData == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            Employee not found!
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <EmployeeForm @ref="employeeForm" 
+                          IsEditMode="true" 
+                          Model="@formModel" />
+
+            <div class="mt-4 flex gap-2 justify-end">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Default" 
+                           OnClick="GoBack">
+                    Cancel
+                </MudButton>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           OnClick="HandleSubmit"
+                           Disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <span class="ml-2">Updating...</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Save" />
+                        <span class="ml-2">Update</span>
+                    }
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+</div>
+
+@code {
+    private int employeeId;
+    private EmployeeForm? employeeForm;
+    private UserResponse? employeeData;
+    private UserCreateRequest formModel = new UserCreateRequest();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get ID from query string (encoded)
+        var uri = new Uri(NavManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var empIdEncoded = query["empId"];
+
+        if (!string.IsNullOrEmpty(empIdEncoded))
+        {
+            try
+            {
+                // Decode the base64 encoded ID
+                var decodedBytes = Convert.FromBase64String(empIdEncoded);
+                var decodedId = System.Text.Encoding.UTF8.GetString(decodedBytes);
+                employeeId = int.Parse(decodedId);
+                await LoadEmployee();
+            }
+            catch (Exception ex)
+            {
+                Toast.Add($"Invalid employee reference: {ex.Message}", Severity.Error);
+                isLoading = false;
+            }
+        }
+        else
+        {
+            Toast.Add("No employee specified", Severity.Error);
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadEmployee()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Api.GetUserByIdAsync(employeeId);
+            if (response?.Data != null)
+            {
+                employeeData = response.Data;
+                
+                // Map UserResponse to UserCreateRequest for the form
+                formModel = new UserCreateRequest
+                {
+                    Username = employeeData.Username ?? "",
+                    FullName = employeeData.FullName,
+                    Role = employeeData.Role ?? "",
+                    Password = "" // Don't load password
+                };
+            }
+            else
+            {
+                Toast.Add("Employee not found", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Error loading employee: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/employees");
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (employeeForm == null) return;
+
+        var isValid = await employeeForm.ValidateAsync();
+        if (!isValid)
+        {
+            Toast.Add("Please fill in all required fields correctly", Severity.Error);
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var model = employeeForm.GetModel();
+            
+            // Convert UserCreateRequest to UserUpdateRequest
+            var updateRequest = new UserUpdateRequest
+            {
+                FullName = model.FullName,
+                Role = model.Role,
+                Password = string.IsNullOrWhiteSpace(model.Password) ? null : model.Password
+            };
+
+            var response = await Api.UpdateUserAsync(employeeId, updateRequest);
+
+            if (response?.Data != null)
+            {
+                Toast.Add("Employee updated successfully!", Severity.Success);
+                NavManager.NavigateTo("/employees");
+            }
+            else
+            {
+                Toast.Add("Failed to update employee", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

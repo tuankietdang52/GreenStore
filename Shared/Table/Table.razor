@@ -1,7 +1,15 @@
-@typeparam TModel
+﻿@typeparam TModel
 
-<MudTable Loading=@Props.IsLoading Items=@Props.Items Bordered=true Class="!border-black" Height="500px" Striped="true"
-    MultiSelection=@Props.IsSelectable HorizontalScrollbar=true FixedHeader=true>
+<MudTable Loading=@Props.IsLoading 
+          Items=@Props.Items 
+          Bordered=true 
+          Class="!border-black" 
+          Height="500px" 
+          Striped="true"
+          MultiSelection=@Props.IsSelectable
+          @bind-SelectedItems="selectedHashSet"
+          HorizontalScrollbar=true 
+          FixedHeader=true>
     <ColGroup>
         @if (Props.IsSelectable)
         {
@@ -11,6 +19,11 @@
         @foreach (var column in @Props.Columns)
         {
             <col />
+        }
+        @if (Props.HasActions)
+        {
+            // for action column
+            <col style="width: 150px;" />
         }
     </ColGroup>
     <HeaderContent>
@@ -29,11 +42,34 @@
                 }
             </MudTh>
         }
+        @if (Props.HasActions)
+        {
+            <MudTh Style="text-align: center;">Hành động</MudTh>
+        }
     </HeaderContent>
     <RowTemplate>
         @foreach (var column in @Props.Columns)
         {
             <MudTd DataLabel=@column.Header>@column.ValueSelector(context)</MudTd>
+        }
+        @if (Props.HasActions)
+        {
+            <MudTd DataLabel="Actions" Style="text-align: center;">
+                <div class="d-flex gap-1 justify-center">
+                    @foreach (var action in Props.Actions)
+                    {
+                        @if (action.IsVisible == null || action.IsVisible(context))
+                        {
+                            <MudIconButton Icon="@action.Icon"
+                                          Color="@action.Color"
+                                          Variant="@action.Variant"
+                                          Size="Size.Small"
+                                          Title="@action.Text"
+                                          OnClick="@(() => action.OnClick(context))" />
+                        }
+                    }
+                </div>
+            </MudTd>
         }
     </RowTemplate>
 </MudTable>
@@ -41,4 +77,33 @@
 @code {
     [Parameter]
     public required TableProps<TModel> Props { get; set; }
+
+    private HashSet<TModel> _selectedHashSet = new HashSet<TModel>();
+
+    private HashSet<TModel> selectedHashSet
+    {
+        get => _selectedHashSet;
+        set
+        {
+            _selectedHashSet = value;
+            Props.SelectedItems = value;
+            if (Props.SelectedItemsChanged.HasDelegate)
+            {
+                Props.SelectedItemsChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Sync from Props.SelectedItems to local HashSet
+        if (Props.SelectedItems is HashSet<TModel> hashSet)
+        {
+            _selectedHashSet = hashSet;
+        }
+        else
+        {
+            _selectedHashSet = new HashSet<TModel>(Props.SelectedItems);
+        }
+    }
 }

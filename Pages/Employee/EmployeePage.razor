@@ -1,0 +1,343 @@
+﻿@page "/employees"
+@using GreenStore.Clients
+@using GreenStore.Shared.Pagination
+@using GreenStore.Shared.Table
+@inject IGreenStoreApiClient Api
+@inject ISnackbar Toast
+@inject NavigationManager NavManager
+@inject IDialogService DialogService
+
+
+<PageTitle>Employees</PageTitle>
+
+<div class="w-full h-full px-4 flex flex-col gap-4">
+    <MudText Typo="@Typo.h4">
+        Employees
+    </MudText>
+
+    @* Filter Section with Action Buttons - All in one row *@
+    <MudPaper Class="pa-2" Elevation="1">
+        <div class="d-flex gap-2 align-center flex-wrap">
+            <MudSelect @bind-Value="searchType"
+                       Label="Tìm theo"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 150px;">
+                <MudSelectItem Value="SearchType.Username">Username</MudSelectItem>
+                <MudSelectItem Value="SearchType.FullName">Full Name</MudSelectItem>
+            </MudSelect>
+
+            <MudTextField @bind-Value="searchText"
+                          Label="Tìm kiếm"
+                          Placeholder="@GetSearchPlaceholder()"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Clearable="true"
+                          OnClearButtonClick="ClearSearch"
+                          Style="min-width: 250px;"
+                          Immediate="false" />
+
+            <MudSelect @bind-Value="selectedRole"
+                       Label="Role"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true"
+                       Style="min-width: 150px;"
+                       Placeholder="Tất cả">
+                <MudSelectItem Value="@((string?)null)">Tất cả</MudSelectItem>
+                <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
+                <MudSelectItem Value="@("staff")">Nhân viên</MudSelectItem>
+                @* <MudSelectItem Value="@("employee")">Employee</MudSelectItem> *@
+            </MudSelect>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Search"
+                       OnClick="ApplyFilter">
+                TÌM KIẾM
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Clear"
+                       OnClick="ClearFilter">
+                XÓA BỘ LỌC
+            </MudButton>
+
+            <div style="flex-grow: 1;"></div>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="NavigateToAdd">
+                THÊM MỚI
+            </MudButton>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       OnClick="ShowDeleteDialog"
+                       Disabled="@(tableProps.SelectedItems.Count != 1)">
+                XÓA
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    @* Selection counter *@
+    @if (tableProps.SelectedItems.Count > 0)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="py-2">
+            <MudText Typo="Typo.body2">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                Đã chọn: <strong>@tableProps.SelectedItems.Count</strong> nhân viên
+            </MudText>
+        </MudAlert>
+    }
+
+    <MudPaper Class="w-full !flex !flex-col gap-4">
+        <Table Props=@tableProps></Table>
+        <Pagination Props="paginationProps" OnPageChanged="OnPageChanged" OnPageSizeChanged="OnPageSizeChanged">
+        </Pagination>
+    </MudPaper>
+</div>
+
+
+
+@code {
+    // Enum for search type
+    private enum SearchType
+    {
+        Username,
+        FullName
+    }
+
+    Response_PagedResponse_UserResponse? data;
+    
+    // Filter parameters
+    private string? searchText = null;
+    private string? selectedRole = null;
+    private SearchType searchType = SearchType.Username;
+
+    TableProps<UserResponse> tableProps = new TableProps<UserResponse>
+    {
+        Columns = [
+            new TableColumn<UserResponse> {
+                Header = "Họ và Tên",
+                SortSelector = e => e.FullName,
+                ValueSelector = e => e.FullName
+            },
+            new TableColumn<UserResponse> {
+                Header = "Tên tài khoản ",
+                SortSelector = e => e.Username,
+                ValueSelector = e => e.Username
+            },
+            new TableColumn<UserResponse> {
+                Header = "Vai trò",
+                SortSelector = e => e.Role,
+                ValueSelector = e => e.Role
+            }
+        ],
+        IsLoading = true,
+        IsSelectable = true,
+        SelectedItems = new HashSet<UserResponse>()
+    };
+
+    PaginationProps paginationProps = new PaginationProps()
+    {
+        CurrentPage = 1,
+        PageSize = 10,
+        TotalPages = 0,
+        Placement = Shared.Pagination.Placement.End
+    };
+
+    protected override void OnInitialized()
+    {
+        // Define actions for each row
+        tableProps.Actions = new List<TableAction<UserResponse>>
+        {
+            new TableAction<UserResponse>
+            {
+                Icon = Icons.Material.Filled.Edit,
+                Text = "Edit",
+                Color = Color.Primary,
+                Variant = Variant.Filled,
+                OnClick = NavigateToEditEmployee
+            }
+        };
+
+        tableProps.SelectedItemsChanged = EventCallback.Factory.Create<ISet<UserResponse>>(this, OnSelectionChanged);
+    }
+
+    private void NavigateToEditEmployee(UserResponse employee)
+    {
+        var encodedId = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(employee.UserId.ToString())
+        );
+        NavManager.NavigateTo($"/employees/edit?empId={encodedId}");
+    }
+
+    private string GetSearchPlaceholder()
+    {
+        return searchType == SearchType.Username 
+            ? "Nhập username..." 
+            : "Nhập tên nhân viên...";
+    }
+
+    private void OnSelectionChanged(ISet<UserResponse> selectedItems)
+    {
+        StateHasChanged();
+    }
+
+    private void NavigateToAdd()
+    {
+        NavManager.NavigateTo("/employees/add");
+    }
+
+    private async Task ShowDeleteDialog()
+    {
+        if (tableProps.SelectedItems.Count != 1)
+        {
+            Toast.Add("Vui lòng chọn một nhân viên để xóa", Severity.Warning);
+            return;
+        }
+
+        var selectedEmployee = tableProps.SelectedItems.First();
+        
+        bool? result = await DialogService.ShowMessageBox(
+            "Xác nhận xóa",
+            $"Bạn có chắc chắn muốn xóa nhân viên '{selectedEmployee.FullName ?? selectedEmployee.Username}' không?",
+            yesText: "Xóa", 
+            cancelText: "Hủy");
+
+        if (result == true)
+        {
+            await DeleteEmployee(selectedEmployee.UserId);
+        }
+    }
+
+    private async Task DeleteEmployee(int userId)
+    {
+        try
+        {
+            var response = await Api.DeleteUserAsync(userId);
+            
+            if (response != null)
+            {
+                Toast.Add("Xóa nhân viên thành công!", Severity.Success);
+                
+                // Clear selection and refresh list
+                tableProps.SelectedItems.Clear();
+                await Fetch();
+            }
+            else
+            {
+                Toast.Add("Không thể xóa nhân viên", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Lỗi khi xóa nhân viên: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ApplyFilter()
+    {
+        paginationProps.CurrentPage = 1; // Reset to first page when filtering
+        await Fetch();
+    }
+
+    private async Task ClearFilter()
+    {
+        searchText = null;
+        selectedRole = null;
+        searchType = SearchType.Username;
+        paginationProps.CurrentPage = 1;
+        await Fetch();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchText = null;
+        await Fetch();
+    }
+
+    private async Task Fetch()
+    {
+        tableProps.IsLoading = true;
+        try
+        {
+            int curPage = paginationProps.CurrentPage;
+            int pageSize = paginationProps.PageSize;
+
+            // Check if we have any filters
+            bool hasFilters = !string.IsNullOrWhiteSpace(searchText) || !string.IsNullOrWhiteSpace(selectedRole);
+
+            if (hasFilters)
+            {
+                // Determine username and fullName based on searchType
+                string? usernameFilter = null;
+                string? fullNameFilter = null;
+
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    if (searchType == SearchType.Username)
+                    {
+                        usernameFilter = searchText;
+                        fullNameFilter = null;
+                    }
+                    else // SearchType.FullName
+                    {
+                        usernameFilter = null;
+                        fullNameFilter = searchText;
+                    }
+                }
+
+                // Use FilterUsersAsync with appropriate parameters
+                data = await Api.FilterUsersAsync(
+                    username: usernameFilter,
+                    fullName: fullNameFilter,
+                    role: selectedRole,
+                    pageNumber: curPage,
+                    pageSize: pageSize
+                );
+            }
+            else
+            {
+                // Use GetAllUsersAsync when no filters
+                data = await Api.GetAllUsersAsync(curPage, pageSize);
+            }
+
+            if (data != null && data.Data != null)
+            {
+                tableProps.Items = data?.Data?.Items ?? [];
+                paginationProps.TotalPages = data?.Data?.TotalPages ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Add($"Error fetching employees: {ex.Message}", Severity.Error);
+        }
+        
+        tableProps.IsLoading = false;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Fetch();
+    }
+
+    private async void OnPageChanged(int page)
+    {
+        paginationProps.CurrentPage = page;
+        await Fetch();
+    }
+
+    private async void OnPageSizeChanged(int pageSize)
+    {
+        paginationProps.PageSize = pageSize;
+        await Fetch();
+    }
+}}
