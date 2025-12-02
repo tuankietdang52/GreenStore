@@ -11,103 +11,90 @@
 <PageTitle>Employees</PageTitle>
 
 <div class="w-full h-full px-4 flex flex-col gap-4">
-    <div class="w-full flex flex-col gap-2">
-        <div class="flex gap-2 items-center">
-            <MudText Typo="@Typo.h4">
-                Employees
-            </MudText>
+    <MudText Typo="@Typo.h4">
+        Employees
+    </MudText>
 
-            <div class="flex gap-2">
-                @*add button *@
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           OnClick="NavigateToAdd">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" /> Thêm Mới
-                </MudButton>
+    @* Filter Section with Action Buttons - All in one row *@
+    <MudPaper Class="pa-2" Elevation="1">
+        <div class="d-flex gap-2 align-center flex-wrap">
+            <MudSelect @bind-Value="searchType"
+                       Label="Tìm theo"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 150px;">
+                <MudSelectItem Value="SearchType.Username">Username</MudSelectItem>
+                <MudSelectItem Value="SearchType.FullName">Full Name</MudSelectItem>
+            </MudSelect>
 
-                @*edit button - enabled only when exactly 1 item selected *@
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Secondary"
-                           OnClick="NavigateToEdit"
-                           Disabled="@(tableProps.SelectedItems.Count != 1)">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" /> Sửa
-                </MudButton>
+            <MudTextField @bind-Value="searchText"
+                          Label="Tìm kiếm"
+                          Placeholder="@GetSearchPlaceholder()"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Clearable="true"
+                          OnClearButtonClick="ClearSearch"
+                          Style="min-width: 250px;"
+                          Immediate="false" />
 
-                @*delete button - enabled only when exactly 1 item selected *@
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Error"
-                           OnClick="ShowDeleteDialog"
-                           Disabled="@(tableProps.SelectedItems.Count != 1)">
-                    <MudIcon Icon="@Icons.Material.Filled.Delete" /> Xóa
-                </MudButton>
-            </div>
+            <MudSelect @bind-Value="selectedRole"
+                       Label="Role"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true"
+                       Style="min-width: 150px;"
+                       Placeholder="Tất cả">
+                <MudSelectItem Value="@((string?)null)">Tất cả</MudSelectItem>
+                <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
+                <MudSelectItem Value="@("staff")">Nhân viên</MudSelectItem>
+                @* <MudSelectItem Value="@("employee")">Employee</MudSelectItem> *@
+            </MudSelect>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Search"
+                       OnClick="ApplyFilter">
+                TÌM KIẾM
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Clear"
+                       OnClick="ClearFilter">
+                XÓA BỘ LỌC
+            </MudButton>
+
+            <div style="flex-grow: 1;"></div>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="NavigateToAdd">
+                THÊM MỚI
+            </MudButton>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       OnClick="ShowDeleteDialog"
+                       Disabled="@(tableProps.SelectedItems.Count != 1)">
+                XÓA
+            </MudButton>
         </div>
+    </MudPaper>
 
-        @* Filter Section *@
-        <MudPaper Class="pa-4" Elevation="1">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="2">
-                    <MudSelect @bind-Value="searchType"
-                               Label="Tìm theo"
-                               Variant="Variant.Outlined">
-                        <MudSelectItem Value="SearchType.Username">Username</MudSelectItem>
-                        <MudSelectItem Value="SearchType.FullName">Full Name</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" md="4">
-                    <MudTextField @bind-Value="searchText"
-                                  Label="Tìm kiếm"
-                                  Placeholder="@GetSearchPlaceholder()"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  Clearable="true"
-                                  OnClearButtonClick="ClearSearch"
-                                  Immediate="false" />
-                </MudItem>
-
-                <MudItem xs="12" md="2">
-                    <MudSelect @bind-Value="selectedRole"
-                               Label="Role"
-                               Variant="Variant.Outlined"
-                               Clearable="true"
-                               Placeholder="Tất cả">
-                        <MudSelectItem Value="@((string?)null)">Tất cả</MudSelectItem>
-                        <MudSelectItem Value="@("admin")">Admin</MudSelectItem>
-                        <MudSelectItem Value="@("manager")">Manager</MudSelectItem>
-                        <MudSelectItem Value="@("employee")">Employee</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-
-                <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Search"
-                               OnClick="ApplyFilter">
-                        Tìm kiếm
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               StartIcon="@Icons.Material.Filled.Clear"
-                               OnClick="ClearFilter">
-                        Xóa bộ lọc
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
-
-        @* Selection counter *@
-        @if (tableProps.SelectedItems.Count > 0)
-        {
-            <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="py-2">
-                <MudText Typo="Typo.body2">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                    Đã chọn: <strong>@tableProps.SelectedItems.Count</strong> nhân viên
-                </MudText>
-            </MudAlert>
-        }
-    </div>
+    @* Selection counter *@
+    @if (tableProps.SelectedItems.Count > 0)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" NoIcon="false" Class="py-2">
+            <MudText Typo="Typo.body2">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                Đã chọn: <strong>@tableProps.SelectedItems.Count</strong> nhân viên
+            </MudText>
+        </MudAlert>
+    }
 
     <MudPaper Class="w-full !flex !flex-col gap-4">
         <Table Props=@tableProps></Table>
@@ -136,19 +123,18 @@
     TableProps<UserResponse> tableProps = new TableProps<UserResponse>
     {
         Columns = [
-            // Removed ID column - ID is still in the data but not displayed
             new TableColumn<UserResponse> {
-                Header = "Name",
+                Header = "Họ và Tên",
                 SortSelector = e => e.FullName,
                 ValueSelector = e => e.FullName
             },
             new TableColumn<UserResponse> {
-                Header = "Username",
+                Header = "Tên tài khoản ",
                 SortSelector = e => e.Username,
                 ValueSelector = e => e.Username
             },
             new TableColumn<UserResponse> {
-                Header = "Role",
+                Header = "Vai trò",
                 SortSelector = e => e.Role,
                 ValueSelector = e => e.Role
             }
@@ -168,7 +154,28 @@
 
     protected override void OnInitialized()
     {
+        // Define actions for each row
+        tableProps.Actions = new List<TableAction<UserResponse>>
+        {
+            new TableAction<UserResponse>
+            {
+                Icon = Icons.Material.Filled.Edit,
+                Text = "Edit",
+                Color = Color.Primary,
+                Variant = Variant.Filled,
+                OnClick = NavigateToEditEmployee
+            }
+        };
+
         tableProps.SelectedItemsChanged = EventCallback.Factory.Create<ISet<UserResponse>>(this, OnSelectionChanged);
+    }
+
+    private void NavigateToEditEmployee(UserResponse employee)
+    {
+        var encodedId = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(employee.UserId.ToString())
+        );
+        NavManager.NavigateTo($"/employees/edit?empId={encodedId}");
     }
 
     private string GetSearchPlaceholder()
@@ -186,24 +193,6 @@
     private void NavigateToAdd()
     {
         NavManager.NavigateTo("/employees/add");
-    }
-
-    private void NavigateToEdit()
-    {
-        if (tableProps.SelectedItems.Count == 1)
-        {
-            var selectedEmployee = tableProps.SelectedItems.First();
-            // Store the ID in session storage or pass it via NavigationManager state
-            NavManager.NavigateTo($"/employees/edit?empId={Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(selectedEmployee.UserId.ToString()))}");
-        }
-        else if (tableProps.SelectedItems.Count == 0)
-        {
-            Toast.Add("Vui lòng chọn một nhân viên để sửa", Severity.Warning);
-        }
-        else
-        {
-            Toast.Add("Chỉ được chọn một nhân viên để sửa", Severity.Warning);
-        }
     }
 
     private async Task ShowDeleteDialog()
@@ -296,11 +285,11 @@
                     if (searchType == SearchType.Username)
                     {
                         usernameFilter = searchText;
-                        fullNameFilter = null; // Empty string for fullName
+                        fullNameFilter = null;
                     }
                     else // SearchType.FullName
                     {
-                        usernameFilter = null; // Empty string for username
+                        usernameFilter = null;
                         fullNameFilter = searchText;
                     }
                 }
@@ -351,4 +340,4 @@
         paginationProps.PageSize = pageSize;
         await Fetch();
     }
-}
+}}

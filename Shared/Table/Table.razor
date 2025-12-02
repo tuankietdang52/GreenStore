@@ -1,4 +1,4 @@
-@typeparam TModel
+﻿@typeparam TModel
 
 <MudTable Loading=@Props.IsLoading 
           Items=@Props.Items 
@@ -20,6 +20,11 @@
         {
             <col />
         }
+        @if (Props.HasActions)
+        {
+            // for action column
+            <col style="width: 150px;" />
+        }
     </ColGroup>
     <HeaderContent>
         @foreach (var column in @Props.Columns)
@@ -37,11 +42,34 @@
                 }
             </MudTh>
         }
+        @if (Props.HasActions)
+        {
+            <MudTh Style="text-align: center;">Hành động</MudTh>
+        }
     </HeaderContent>
     <RowTemplate>
         @foreach (var column in @Props.Columns)
         {
             <MudTd DataLabel=@column.Header>@column.ValueSelector(context)</MudTd>
+        }
+        @if (Props.HasActions)
+        {
+            <MudTd DataLabel="Actions" Style="text-align: center;">
+                <div class="d-flex gap-1 justify-center">
+                    @foreach (var action in Props.Actions)
+                    {
+                        @if (action.IsVisible == null || action.IsVisible(context))
+                        {
+                            <MudIconButton Icon="@action.Icon"
+                                          Color="@action.Color"
+                                          Variant="@action.Variant"
+                                          Size="Size.Small"
+                                          Title="@action.Text"
+                                          OnClick="@(() => action.OnClick(context))" />
+                        }
+                    }
+                </div>
+            </MudTd>
         }
     </RowTemplate>
 </MudTable>
